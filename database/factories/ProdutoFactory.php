@@ -14,10 +14,12 @@ class ProdutoFactory extends Factory
      *
      * @return array<string, mixed>
      */
-    public function definition(): array
+    public function definition()
     {
         return [
-            //
+            'nome'       => $this->faker->word(),
+            'preco'      => $this->faker->randomFloat(2, 1, 100),
+            'variacoes'  => null,
         ];
     }
 }
