@@ -7,24 +7,25 @@ use Illuminate\Foundation\Http\FormRequest;
 class ProdutoRequest extends FormRequest
 {
     /**
-     * Determine if the user is authorized to make this request.
+     * Nome do error-bag pra este request.
+     * Assim não “pega” erros de outros forms (ex: cep/email).
      */
+    protected $errorBag = 'produto';
+
     public function authorize(): bool
     {
-        return false;
+        return true;
     }
 
-    /**
-     * Get the validation rules that apply to the request.
-     *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
-     */
     public function rules(): array
     {
         return [
-            'cep' => 'required|string|size:8',
-            'email' => 'required|email',
-            'cupom' => 'nullable|string|exists:cupons,codigo',
+            'nome'        => 'required|string|max:255',
+            'preco'       => 'required|numeric|min:0',
+            'variacoes'   => 'required|array',
+            'variacoes.*' => 'nullable|string|max:255',
+            'estoque'     => 'required|array',
+            'estoque.*'   => 'required|integer|min:0',
         ];
     }
 }

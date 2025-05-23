@@ -3,34 +3,56 @@
 namespace App\Services;
 
 use App\Models\Cupom;
+use App\Models\Produto;
 use Illuminate\Support\Facades\Session;
 
 class CartService
 {
-    public function adicionar(int $id, ?string $var): void
+    public function adicionar(int $produtoId, ?string $variacao = null): void
     {
-        $cart = Session::get('carrinho', []);
-        $cart[] = ['produto_id' => $id, 'variacao' => $var, 'quantidade' => 1];
-        Session::put('carrinho', $cart);
+        $carrinho = Session::get('carrinho', []);
+
+        $produto = Produto::findOrFail($produtoId);
+
+        // Tenta encontrar item igual no carrinho
+        foreach ($carrinho as &$item) {
+            if ($item['produto_id'] === $produto->id && $item['variacao'] === $variacao) {
+                $item['quantidade']++;
+                Session::put('carrinho', $carrinho);
+                return;
+            }
+        }
+
+        // Se não existir, adiciona novo
+        $carrinho[] = [
+            'produto_id'     => $produto->id,
+            'variacao'       => $variacao,
+            'quantidade'     => 1,
+            'preco_unitario' => $produto->preco,
+        ];
+
+        Session::put('carrinho', $carrinho);
     }
 
-    public function calcularFrete(float $sub): float
+    public function calcularFrete(float $subtotal): float
     {
         return match (true) {
-            $sub >= 200 => 0.0,
-            $sub >= 52 => 15.0,
-            default => 20.0,
+            $subtotal >= 200 => 0.0,
+            $subtotal >= 52  => 15.0,
+            default          => 20.0,
         };
     }
 
-    public function aplicarCupom(float &$sub, ?string $code): void
+
+    public function aplicarCupom(float &$subtotal, ?string $codigo): void
     {
-        if (! $code) {
+        if (!$codigo) {
             return;
         }
-        $c = Cupom::where('codigo', $code)->first();
-        if ($c && now()->lte($c->validade) && $sub >= $c->minimo_subtotal) {
-            $sub -= $c->desconto;
+
+        $cupom = \App\Models\Cupom::where('codigo', $codigo)->first();
+        if ($cupom && now()->lte($cupom->validade) && $subtotal >= $cupom->minimo_subtotal) {
+            $subtotal -= $cupom->desconto;
         }
     }
 }

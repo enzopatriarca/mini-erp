@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ProdutoRequest;
@@ -9,70 +8,90 @@ use Illuminate\Support\Facades\DB;
 
 class ProdutoController extends Controller
 {
-    private function save(ProdutoRequest $r, ?Produto $p = null)
+    public function index(Request $request)
     {
-        $p = $p ?? new Produto;
-        $p->fill($r->only('nome', 'preco', 'variacoes'))->save();
-        foreach ($r->input('estoque') as $var => $qtd) {
-            $p->estoques()->updateOrCreate(['variacao' => $var], ['quantidade' => $qtd]);
+        $search = $request->query('search');
+        $query  = Produto::with('estoques');
+
+        if ($search) {
+            $query->where('nome', 'like', "%{$search}%")
+                ->orWhereRaw("JSON_CONTAINS(variacoes, '\"{$search}\"')");
         }
+
+        $produtos = $query->latest()->paginate(10)->withQueryString();
+
+        return view('produtos.index', compact('produtos','search'));
     }
 
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
-    {
-        //
-    }
-
-    /**
-     * Show the form for creating a new resource.
-     */
     public function create()
     {
-        //
+        return view('produtos.form');
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(ProdutoRequest $r)
+    public function store(ProdutoRequest $request)
     {
-        DB::transaction(fn () => $this->save($r));
+        // tudo em transação para segurança
+        DB::transaction(function() use ($request) {
+            // 1) cria o produto
+            $produto = Produto::create($request->only(['nome','preco']));
 
-        return redirect()->route('produtos.index');
+            // 2) atualiza a coluna JSON 'variacoes'
+            $variacoes = $request->input('variacoes', []);
+            $produto->variacoes = $variacoes;
+            $produto->save();
+
+            // 3) persiste os estoques (uma linha por variação)
+            foreach ($variacoes as $i => $var) {
+                $produto->estoques()->create([
+                    'variacao'   => $var ?: 'default',
+                    'quantidade' => $request->estoque[$i] ?? 0,
+                ]);
+            }
+        });
+
+        return redirect()
+            ->route('produtos.index')
+            ->with('success','Produto cadastrado com sucesso.');
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
+    public function edit(Produto $produto)
     {
-        //
+        $produto->load('estoques');
+        return view('produtos.form', compact('produto'));
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(string $id)
+    public function update(ProdutoRequest $request, Produto $produto)
     {
-        //
+        DB::transaction(function() use ($request, $produto) {
+            // 1) atualiza nome e preço
+            $produto->update($request->only(['nome','preco']));
+
+            // 2) atualiza JSON de variações
+            $variacoes = $request->input('variacoes', []);
+            $produto->variacoes = $variacoes;
+            $produto->save();
+
+            // 3) apaga estoques antigos e recria
+            $produto->estoques()->delete();
+            foreach ($variacoes as $i => $var) {
+                $produto->estoques()->create([
+                    'variacao'   => $var ?: 'default',
+                    'quantidade' => $request->estoque[$i] ?? 0,
+                ]);
+            }
+        });
+
+        return redirect()
+            ->route('produtos.index')
+            ->with('success','Produto atualizado com sucesso.');
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id)
+    public function destroy(Produto $produto)
     {
-        //
-    }
+        $produto->estoques()->delete();
+        $produto->delete();
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
-    {
-        //
+        return redirect()->route('produtos.index')
+                         ->with('success','Produto removido.');
     }
 }

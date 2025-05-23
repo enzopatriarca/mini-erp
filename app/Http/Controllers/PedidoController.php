@@ -7,35 +7,62 @@ use App\Mail\PedidoConfirmado;
 use App\Models\Pedido;
 use App\Services\CartService;
 use App\Services\CepService;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 
 class PedidoController extends Controller
 {
-    public function finalizar(PedidoRequest $r, CartService $cart, CepService $cep)
+
+    public function index()
     {
-        $it = session('carrinho', []);
-        $subtotal = collect($it)->sum(fn (array $item): float => $item['quantidade'] * $item['preco_unitario']
-        );
+        $pedidos = Pedido::latest()->get();
+        return view('pedidos.index', compact('pedidos'));
+    }
 
-        $cart->aplicarCupom($subtotal, $r->cupom);
+    public function show(Pedido $pedido)
+    {
+        return view('pedidos.show', compact('pedido'));
+    }
 
+    public function finalizar(PedidoRequest $request, CartService $cart, CepService $cep)
+    {
+        // 1) Pega itens do carrinho (sempre array)
+        $itens = session('carrinho', []);
+
+        // 2) Calcula subtotal
+        $subtotal = collect($itens)
+            ->sum(fn($item) => $item['quantidade'] * $item['preco_unitario']);
+
+        // 3) Aplica cupom
+        $cart->aplicarCupom($subtotal, $request->cupom);
+
+        // 4) Calcula frete
         $frete = $cart->calcularFrete($subtotal);
-        $endereco = $cep->buscar($r->cep);
 
-        $pedido = Pedido::create([
-            'itens' => $it,
-            'subtotal' => $subtotal,
-            'frete' => $frete,
-            'total' => $subtotal + $frete,
-            'cep' => $r->cep,
-            'endereco' => "{$endereco['logradouro']}, {$endereco['bairro']}, {$endereco['localidade']}",
-        ]);
+        // 5) Busca endereço
+        $dadosCep = $cep->buscar($request->cep);
+        $endereco = "{$dadosCep['logradouro']}, {$dadosCep['bairro']}, {$dadosCep['localidade']}";
 
-        Mail::to($r->email)
-            ->queue(new PedidoConfirmado($pedido));
+        // 6) Persiste em transação
+        DB::transaction(function() use ($itens, $subtotal, $frete, $request, $endereco) {
+            $pedido = Pedido::create([
+                'itens'    => $itens,
+                'subtotal' => $subtotal,
+                'frete'    => $frete,
+                'total'    => $subtotal + $frete,
+                'cep'      => $request->cep,
+                'endereco' => $endereco,
+                'status'   => 'pendente',
+            ]);
 
+            Mail::to($request->email)
+                ->queue(new \App\Mail\PedidoConfirmado($pedido));
+        });
+
+        // 7) Limpa carrinho
         session()->forget('carrinho');
 
-        return view('pedidos.checkout', compact('pedido'));
+        // 8) Redirect consistente
+        return redirect('/produtos');
     }
 }

@@ -17,4 +17,5 @@ class Produto extends Model
     {
         return $this->hasMany(Estoque::class);
     }
+
 }
