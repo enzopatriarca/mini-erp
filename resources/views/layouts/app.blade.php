@@ -38,7 +38,6 @@
       overflow:hidden;
       transition:width .3s ease, padding .3s ease;
     }
-    /* Logo alinhada */
     #sidebar .sidebar-header {
       display:flex;
       align-items:center;
@@ -47,7 +46,6 @@
       color:rgba(255,255,255,0.85);
       text-decoration:none;
     }
-    /* Links de menu */
     #sidebar a.nav-link {
       display:flex;
       align-items:center;
@@ -61,7 +59,6 @@
       background:rgba(255,255,255,0.15);
       color:#fff;
     }
-    /* Ícones e labels */
     #sidebar .icon { font-size:1.2rem; }
     #sidebar .label { margin-left:.5rem; }
 
@@ -103,26 +100,39 @@
     }
     #content, main { padding-bottom: 3.5rem; }
 
-    /* Toast acima de tudo */
     .toast-container { z-index:10000 !important; }
 
-    /* BOTÕES */
-    .btn-primary { background-color:var(--bs-primary); border-color:var(--bs-primary); }
-    .btn-primary:hover { background-color:#5a32a3; border-color:#5a32a3; }
-    .btn-secondary { background-color:var(--bs-secondary); border-color:var(--bs-secondary); }
-    .badge-secondary { background-color:var(--bs-secondary); }
+    .btn-primary {
+      background-color:var(--bs-primary);
+      border-color:var(--bs-primary);
+    }
+    .btn-primary:hover {
+      background-color:#5a32a3;
+      border-color:#5a32a3;
+    }
+    .btn-secondary {
+      background-color:var(--bs-secondary);
+      border-color:var(--bs-secondary);
+    }
+    .badge-secondary {
+      background-color:var(--bs-secondary);
+    }
 
     /* SIDEBAR COLLAPSED */
     body.sidebar-collapsed #sidebar {
       width:60px !important;
       padding:.5rem !important;
     }
-    body.sidebar-collapsed #sidebar .label { display:none !important; }
+    body.sidebar-collapsed #sidebar .label {
+      display:none !important;
+    }
     body.sidebar-collapsed #sidebar .nav-link {
       justify-content:center;
       padding:.5rem 0 !important;
     }
-    body.sidebar-collapsed #content { margin-left:0; }
+    body.sidebar-collapsed #content {
+      margin-left:0;
+    }
   </style>
 </head>
 <body>
@@ -132,6 +142,13 @@
       <i class="bi bi-gear-fill icon"></i>
       <span class="label fs-4 fw-bold">Mini ERP</span>
     </a>
+
+    @php
+      // Conta total de itens no carrinho (soma das quantidades)
+      $cartItems = session('carrinho', []);
+      $cartCount = collect($cartItems)->sum('quantidade');
+    @endphp
+
     <ul class="nav nav-pills flex-column mb-auto">
       <li class="nav-item">
         <a href="{{ route('produtos.index') }}"
@@ -149,9 +166,15 @@
       </li>
       <li class="nav-item">
         <a href="{{ route('carrinho.index') }}"
-           class="nav-link {{ request()->routeIs('carrinho.*') ? 'active' : '' }}">
+           class="nav-link {{ request()->routeIs('carrinho.*') ? 'active' : '' }} d-flex align-items-center">
           <i class="bi bi-bag icon"></i>
           <span class="label">Carrinho</span>
+
+          @if($cartCount > 0)
+            <span class="badge rounded-pill bg-light text-secondary ms-auto">
+              {{ $cartCount }}
+            </span>
+          @endif
         </a>
       </li>
       <li class="nav-item">
