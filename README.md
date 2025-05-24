@@ -1,82 +1,166 @@
-Mini ERP (Enzo Patriarca)
+# Mini ERP
 
-Pequeno sistema ERP para gerenciamento de Produtos, Cupons, Pedidos e Estoque, desenvolvido em Laravel 12.
+*Pequeno sistema ERP para gerenciamento de Produtos, Cupons, Pedidos e Estoque, desenvolvido em Laravel 12.*
 
-📦 Tecnologias
+---
 
-Framework: Laravel 12
+## 📦 Tecnologias
 
-Banco de dados: MySQL/MariaDB
+* **Framework:** Laravel 12
+* **Banco de dados:** MySQL / MariaDB
+* **Front-end:** Bootstrap 5
+* **Envio de e-mails:** SMTP (Mailtrap) + Mailable / Queue
+* **Filas (opcional):** database
 
-Front-end: Bootstrap 5
+---
 
-Envio de e-mails: SMTP (Mailtrap) + Mailable/Queue
+## 🚀 Pré-requisitos
 
-Filas (opcional): database
+* PHP >= ^8.2
+* Composer
+* MySQL
+* Node.js (opcional, para assets)
 
-🚀 Pré-requisitos
+---
 
-PHP >= 8.1
+## 🛠️ Instalação e configuração
 
-Composer
+1. **Clone o repositório**
 
-MySQL
+   ```bash
+   git clone https://github.com/enzopatriarca/mini-erp.git
+   cd mini-erp
+   ```
 
-Node.js (opcional, se for usar assets)
+2. **Instale dependências PHP**
 
-🛠️ Instalação e configuração
+   ```bash
+   composer install
+   ```
 
-1.Clone este repositório:
-    git clone https://github.com/enzopatriarca/mini-erp.git
-    cd mini-erp
-2.Instale as dependências PHP:
-    composer install
-3.Copie o arquivo de ambiente e gere a chave da aplicação:
-    cp .env.example .env
-    php artisan key:generate
-4.onfigure suas credenciais no .env:
-    APP_NAME="MiniERP"
-    APP_URL=http://localhost:8000
+3. **Configure o ambiente**
 
-    DB_CONNECTION=mysql
-    DB_HOST=127.0.0.1
-    DB_PORT=3306
-    DB_DATABASE=mini_erp
-    DB_USERNAME=root
-    DB_PASSWORD=
+   ```bash
+   cp .env.example .env
+   php artisan key:generate
+   ```
 
-    MAIL_MAILER=smtp
-    MAIL_HOST=smtp.mailtrap.io
-    MAIL_PORT=2525
-    MAIL_USERNAME=seu_usuario_mailtrap
-    MAIL_PASSWORD=sua_senha_mailtrap
-    MAIL_ENCRYPTION=null
-    MAIL_FROM_ADDRESS=hello@example.com
-    MAIL_FROM_NAME="${APP_NAME}"
+4. **Ajuste o `.env`**
 
-    # Para usar filas via banco de dados:
-    QUEUE_CONNECTION=database
-5.Crie as tabelas no banco:
-    php artisan migrate
-6.Inicie o servidor de desenvolvimento:
-    php artisan serve
+   ```dotenv
+   APP_NAME="MiniERP"
+   APP_URL=http://localhost:8000
 
-Funcionamento
+   DB_CONNECTION=mysql
+   DB_HOST=127.0.0.1
+   DB_PORT=3306
+   DB_DATABASE=mini_erp
+   DB_USERNAME=root
+   DB_PASSWORD=
 
-Produtos: CRUD de produtos, cadastro de variações e controle de estoque.
+   MAIL_MAILER=smtp
+   MAIL_HOST=smtp.mailtrap.io
+   MAIL_PORT=2525
+   MAIL_USERNAME=SEU_USUARIO_MAILTRAP
+   MAIL_PASSWORD=SUA_SENHA_MAILTRAP
+   MAIL_ENCRYPTION=null
+   MAIL_FROM_ADDRESS=hello@example.com
+   MAIL_FROM_NAME="${APP_NAME}"
 
-Carrinho: Guardado em sessão; controla quantidade vs. estoque e calcula frete conforme regras:
+   # Se for usar filas:
+   QUEUE_CONNECTION=database
+   ```
 
-Subtotal entre R$52,00 e R$166,59: frete R$15,00
+5. **Migre o banco**
 
-Subtotal > R$200,00: frete grátis
+   ```bash
+   php artisan migrate
+   ```
 
-Outros valores: frete R$20,00
+6. **(Opcional) Inicie worker de filas**
 
-Cupons: CRUD de cupons com validade e mínimo de subtotal.
+   ```bash
+   php artisan queue:work
+   ```
 
-Pedido: Ao finalizar, grava itens, decrementa estoque e envia e-mail de confirmação.
+7. **Rode o servidor**
 
-E-mail: Template Markdown em resources/views/emails/pedido_confirmado.blade.php. Para usar assincronamente, descomente ->queue() no controller e rode workers.
+   ```bash
+   php artisan serve
+   ```
 
-Webhook: Rota POST /webhook/status que recebe { id, status }. Se cancelado, devolve estoque e remove pedido; se aprovado, decrementa apenas uma vez.
+---
+
+## ⚙️ Funcionalidades
+
+### Produtos
+
+* CRUD completo
+* Cadastro de variações e controle de estoque
+
+### Carrinho
+
+* Armazenado em sessão
+* Valida quantidade vs. estoque
+* Cálculo de frete:
+
+  * Subtotal entre R\$ 52,00 e R\$ 166,59 → R\$ 15,00
+  * Subtotal > R\$ 200,00 → grátis
+  * Demais valores → R\$ 20,00
+
+### Cupons
+
+* CRUD de cupons
+* Validade e valor mínimo de subtotal
+
+### Pedido
+
+* Ao finalizar:
+
+  1. Persiste itens, subtotal, frete, total e endereço
+  2. Decrementa estoque
+  3. Envia e-mail de confirmação
+
+### Webhook de Atualização de Status
+
+**Endpoint**  
+`POST /api/webhook/status`
+
+**Headers**  
+
+Content-Type: application/json
+
+**Payload**  
+```json
+{
+  "id": 123,
+  "status": "aprovado"
+}
+
+curl -X POST http://seu-host/api/webhook/status \
+     -H "Content-Type: application/json" \
+     -d '{"id": 123, "status": "aprovado"}'
+
+## 📧 Testando e-mails
+
+1. Configure Mailtrap no `.env` (veja seção acima).
+2. Execute uma finalização de pedido: você verá o envio (ou o log “E-mail enviado…”).
+3. Acesse a *Sandbox Inbox* do Mailtrap para verificar o HTML gerado.
+
+Se quiser rodar de forma assíncrona, basta descomentar em `PedidoController@finalizar`:
+
+```php
+Mail::to($request->email)
+    // ->send(new PedidoConfirmado($pedido));
+    ->queue(new PedidoConfirmado($pedido));
+```
+
+e manter o **queue worker** ativo.
+
+---
+
+> **Dica:** ao subir em servidor de produção, ajuste `QUEUE_CONNECTION=redis` (ou outro driver) e rode `supervisor` para gerenciar workers.
+
+---
+
+© 2025 Enzo Patriarca
