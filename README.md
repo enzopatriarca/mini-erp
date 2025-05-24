@@ -141,7 +141,9 @@ curl -X POST http://seu-host/api/webhook/status \
      -H "Content-Type: application/json" \
      -d '{"id": 123, "status": "aprovado"}'
 
-## 📧 Testando e-mails
+```
+
+### 📧 Testando e-mails
 
 1. Configure Mailtrap no `.env` (veja seção acima).
 2. Execute uma finalização de pedido: você verá o envio (ou o log “E-mail enviado…”).
@@ -157,7 +159,6 @@ Mail::to($request->email)
 
 e manter o **queue worker** ativo.
 
----
 
 > **Dica:** ao subir em servidor de produção, ajuste `QUEUE_CONNECTION=redis` (ou outro driver) e rode `supervisor` para gerenciar workers.
 
