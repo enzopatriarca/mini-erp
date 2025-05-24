@@ -1,51 +1,47 @@
-# name: CI
+# .github/workflows/ci.yml
+name: CI
 
-# on:
-#   push:
-#     branches: [ main ]
-#   pull_request:
-#     branches: [ main ]
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
-# jobs:
-#   test:
-#     runs-on: ubuntu-latest
+jobs:
+  ci:
+    runs-on: ubuntu-latest
 
-#     steps:
-#       # Checkout
-#       - uses: actions/checkout@v3
+    steps:
+      # 1. Faz checkout do código
+      - uses: actions/checkout@v3
 
-#       # PHP setup
-#       - name: Setup PHP
-#         uses: shivammathur/setup-php@v2
-#         with:
-#           php-version: '8.2'
-#           extensions: mbstring, xml, bcmath, json, sqlite
-#           ini-values: post_max_size=256M, max_execution_time=180
+      # 2. Configura PHP e extensões necessárias
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, xml, bcmath, json, sqlite
+          ini-values: post_max_size=256M, max_execution_time=180
 
-#       # Composer install
-#       - name: Install dependencies
-#         run: composer install --no-interaction --prefer-dist
+      # 3. Instala dependências via Composer
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist
 
-#       # Create .env.testing
-#       - name: Create testing env
-#         run: cp .env.example .env.testing
+      # 4. Prepara ambiente de teste
+      - name: Prepare test environment
+        run: |
+          cp .env.example .env.testing
+          php artisan key:generate --ansi --env=testing
+          php artisan migrate --env=testing --force
 
-#       # Generate key & migrate
-#       - name: Prepare application
-#         env:
-#           APP_ENV: testing
-#         run: |
-#           php artisan key:generate --ansi
-#           php artisan migrate --env=testing --force
+      # 5. (Opcional) Código limpo com Pint
+      - name: Check code style with Pint
+        run: vendor/bin/pint -- --check
 
-#       # Run Pint (code style)
-#       - name: Check code style with Pint
-#         run: vendor/bin/pint -- --check
+      # 6. (Opcional) Análise estática com PHPStan
+      - name: Static analysis with PHPStan
+        run: vendor/bin/phpstan analyse --memory-limit=1G
 
-#       # Run PHPStan (static analysis)
-#       - name: Static analysis with PHPStan
-#         run: vendor/bin/phpstan analyse --memory-limit=1G
-
-#       # Run PHPUnit
-#       - name: Run tests
-#         run: vendor/bin/phpunit --fail-on-warning --verbose
+      # 7. (Opcional) Executa os testes automatizados
+      - name: Run PHPUnit
+        run: vendor/bin/phpunit --fail-on-warning --verbose
