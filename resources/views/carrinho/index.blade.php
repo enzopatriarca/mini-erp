@@ -1,92 +1,161 @@
+{{-- resources/views/carrinho/index.blade.php --}}
 @extends('layouts.app')
 @section('title','Carrinho')
 
 @section('content')
-  <h1>Meu Carrinho</h1>
+  <h1 class="mb-4">Seu Carrinho</h1>
 
-  @if(count($itens))
-    <table class="table">
-      <thead>
-        <tr>
-          <th>Produto</th><th>Variação</th><th>Qtd</th><th>Unitário</th><th>Total</th>
-        </tr>
-      </thead>
-      <tbody>
-      @foreach($itens as $item)
-        @php $p = \App\Models\Produto::find($item['produto_id']); @endphp
-        <tr>
-          <td>{{ $p->nome }}</td>
-          <td>{{ $item['variacao'] ?: '—' }}</td>
-          <td>{{ $item['quantidade'] }}</td>
-          <td>R$ {{ number_format($item['preco_unitario'],2,',','.') }}</td>
-          <td>R$ {{ number_format($item['quantidade'] * $item['preco_unitario'],2,',','.') }}</td>
-        </tr>
-      @endforeach
-      </tbody>
-    </table>
+  {{-- Feedback gerais --}}
+  @if(session('success'))
+    <div class="alert alert-success">{{ session('success') }}</div>
+  @endif
+  @if(session('error') && ! session('cupom_error'))
+    <div class="alert alert-danger">{{ session('error') }}</div>
+  @endif
 
-    {{-- Cupom --}}
-    <form class="row g-2 mb-3" method="GET">
-      <div class="col-auto">
-        <input type="text" name="cupom" value="{{ $request->cupom }}" class="form-control" placeholder="Código do cupom">
-      </div>
-      <div class="col-auto">
-        <button class="btn btn-secondary">Aplicar cupom</button>
-      </div>
-    </form>
-
-    {{-- Totais --}}
-    <ul class="list-group mb-4">
-      <li class="list-group-item">Subtotal: R$ {{ number_format($subtotal,2,',','.') }}</li>
-      <li class="list-group-item">Frete:    R$ {{ number_format($frete,2,',','.') }}</li>
-      <li class="list-group-item fw-bold">Total: R$ {{ number_format($subtotal + $frete,2,',','.') }}</li>
-    </ul>
-
-    {{-- Finalizar Pedido --}}
-    <form action="{{ route('pedido.finalizar') }}" method="POST">
-      @csrf
-
-      <div class="mb-3">
-        <label class="form-label">Nome</label>
-        <input type="text" name="nome" class="form-control" required>
-      </div>
-      <div class="mb-3">
-        <label class="form-label">E-mail</label>
-        <input type="email" name="email" class="form-control" required>
-      </div>
-
-      <div class="row">
-        <div class="col-md-4 mb-3">
-          <label class="form-label">CEP</label>
-          <input type="text" id="cep" name="cep" class="form-control" required>
-        </div>
-        <div class="col-auto align-self-end mb-3">
-          <button type="button" id="buscarCep" class="btn btn-outline-secondary">Buscar Endereço</button>
-        </div>
-      </div>
-
-      <div class="mb-3">
-        <label class="form-label">Endereço</label>
-        <input type="text" id="endereco" name="endereco" class="form-control" readonly>
-      </div>
-
-      <button class="btn btn-primary">Finalizar Pedido</button>
-    </form>
+  @if(empty($itens))
+    <div class="alert alert-info">Seu carrinho está vazio.</div>
   @else
-    <p>Seu carrinho está vazio.</p>
+    {{-- Cartão de Cupom --}}
+    @php
+      $cupomError   = session('cupom_error');
+      $cupomSuccess = session('cupom_success');
+    @endphp
+    <div class="card mb-4">
+      <div class="card-header">Cupom de desconto</div>
+      <div class="card-body">
+        <form method="GET" action="{{ route('carrinho.index') }}">
+          <div class="row g-3">
+            <div class="col-md-9">
+              <div class="form-floating">
+                <input
+                  type="text"
+                  name="cupom"
+                  id="cupom"
+                  class="form-control @if($cupomError) is-invalid @endif"
+                  placeholder="Código do cupom"
+                  value="{{ request('cupom','') }}"
+                >
+                <label for="cupom">Código do cupom</label>
+                @if($cupomError)
+                  <div class="invalid-feedback">
+                    {{ $cupomError }}
+                  </div>
+                @endif
+              </div>
+            </div>
+            <div class="col-md-3">
+              <button 
+                class="btn btn-primary btn-lg w-100" 
+                type="submit"
+              >
+                Aplicar cupom
+              </button>
+            </div>
+          </div>
+        </form>
+
+        @if($cupomSuccess)
+          <div class="mt-3 text-success">
+            ✓ Cupom “{{ request('cupom') }}” aplicado com sucesso!
+          </div>
+        @endif
+      </div>
+    </div>
+
+    {{-- Tabela de Itens --}}
+    <div class="table-responsive mb-4">
+      <table class="table table-striped table-hover align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>Produto</th>
+            <th>Variação</th>
+            <th>Preço unit.</th>
+            <th>Qtd.</th>
+            <th>Subtotal</th>
+            <th class="text-end">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          @foreach($itens as $i => $item)
+            @php
+              $prod = \App\Models\Produto::find($item['produto_id']);
+              $line = $item['preco_unitario'] * $item['quantidade'];
+            @endphp
+            <tr>
+              <td>{{ $prod->nome }}</td>
+              <td>{{ $item['variacao'] ?? '—' }}</td>
+              <td>R$ {{ number_format($item['preco_unitario'],2,',','.') }}</td>
+              <td style="width:120px;">
+                <form action="{{ route('carrinho.atualizar') }}" method="POST" class="d-flex">
+                  @csrf
+                  <input type="hidden" name="index" value="{{ $i }}">
+                  <input
+                    type="number"
+                    name="quantidade"
+                    value="{{ $item['quantidade'] }}"
+                    min="1"
+                    class="form-control form-control-sm me-2"
+                  >
+                  <button class="btn btn-sm btn-secondary">OK</button>
+                </form>
+              </td>
+              <td>R$ {{ number_format($line,2,',','.') }}</td>
+              <td class="text-end">
+                <form action="{{ route('carrinho.remover') }}" method="POST">
+                  @csrf
+                  <input type="hidden" name="index" value="{{ $i }}">
+                  <button class="btn btn-sm btn-danger">×</button>
+                </form>
+              </td>
+            </tr>
+          @endforeach
+        </tbody>
+      </table>
+    </div>
+
+    {{-- Resumo e Finalizar --}}
+    <div class="row align-items-end">
+      <div class="col-md-8">
+        <ul class="list-group list-group-flush w-auto">
+          {{-- Subtotal antes do desconto --}}
+          <li class="list-group-item d-flex justify-content-between">
+            <span>Subtotal</span>
+            <strong>
+              R$ {{ number_format($subtotal + $desconto,2,',','.') }}
+            </strong>
+          </li>
+          {{-- Frete --}}
+          <li class="list-group-item d-flex justify-content-between">
+            <span>Frete</span>
+            <strong>R$ {{ number_format($frete,2,',','.') }}</strong>
+          </li>
+          {{-- Desconto aplicado --}}
+          @if($desconto > 0)
+            <li class="list-group-item d-flex justify-content-between">
+              <span>Desconto</span>
+              <strong class="text-success">- R$ {{ number_format($desconto,2,',','.') }}</strong>
+            </li>
+          @endif
+          {{-- Total final --}}
+          <li class="list-group-item d-flex justify-content-between">
+            <span>Total</span>
+            <strong>R$ {{ number_format($total,2,',','.') }}</strong>
+          </li>
+        </ul>
+      </div>
+      <div class="col-md-4 text-end">
+        <form action="{{ route('pedidos.create') }}" method="GET">
+          @csrf
+          <button
+            type="submit"
+            class="btn btn-success btn-lg px-5"
+            {{ empty($itens) ? 'disabled' : '' }}
+          >
+            Finalizar Pedido
+          </button>
+        </form>
+      </div>
+    </div>
   @endif
 @endsection
-
-@push('scripts')
-<script>
-document.getElementById('buscarCep').addEventListener('click', async () => {
-  const cep = document.getElementById('cep').value.replace(/\D/g,'');
-  const res = await fetch(`{{ route('viacep.buscar','') }}/${cep}`);
-  const data = await res.json();
-  if (!data.erro) {
-    document.getElementById('endereco').value =
-      `${data.logradouro}, ${data.bairro}, ${data.localidade} - ${data.uf}`;
-  }
-});
-</script>
-@endpush

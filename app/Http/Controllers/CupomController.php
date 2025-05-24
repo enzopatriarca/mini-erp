@@ -3,7 +3,6 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\CupomRequest;
 use App\Models\Cupom;
-use Illuminate\Http\Request;
 
 class CupomController extends Controller
 {
@@ -18,13 +17,6 @@ class CupomController extends Controller
         return view('cupons.form');
     }
 
-    public function store(CupomRequest $request)
-    {
-        Cupom::create($request->validated());
-        return redirect()->route('cupons.index')
-                         ->with('success','Cupom criado.');
-    }
-
     public function edit(Cupom $cupom)
     {
         return view('cupons.form', compact('cupom'));
@@ -35,6 +27,13 @@ class CupomController extends Controller
         $cupom->update($request->validated());
         return redirect()->route('cupons.index')
                          ->with('success','Cupom atualizado.');
+    }
+
+    public function store(CupomRequest $request)
+    {
+        Cupom::create($request->validated());
+        return redirect()->route('cupons.index')
+                         ->with('success','Cupom criado.');
     }
 
     public function destroy(Cupom $cupom)

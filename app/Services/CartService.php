@@ -8,30 +8,46 @@ use Illuminate\Support\Facades\Session;
 
 class CartService
 {
-    public function adicionar(int $produtoId, ?string $variacao = null): void
+    public function adicionar(int $produtoId, ?string $variacao = null, int $quantidade = 1): void
     {
         $carrinho = Session::get('carrinho', []);
-
         $produto = Produto::findOrFail($produtoId);
 
-        // Tenta encontrar item igual no carrinho
         foreach ($carrinho as &$item) {
-            if ($item['produto_id'] === $produto->id && $item['variacao'] === $variacao) {
-                $item['quantidade']++;
+            if ($item['produto_id'] === $produto->id
+                && $item['variacao'] === $variacao) {
+                $item['quantidade'] += $quantidade;
                 Session::put('carrinho', $carrinho);
                 return;
             }
         }
 
-        // Se não existir, adiciona novo
         $carrinho[] = [
             'produto_id'     => $produto->id,
             'variacao'       => $variacao,
-            'quantidade'     => 1,
+            'quantidade'     => $quantidade,
             'preco_unitario' => $produto->preco,
         ];
 
         Session::put('carrinho', $carrinho);
+    }
+
+    public function aplicarCupom(float &$subtotal, ?string $codigo): bool
+    {
+        if (!$codigo) {
+            return false;
+        }
+
+        $cupom = Cupom::where('codigo', $codigo)
+                    ->where('validade', '>=', now())
+                    ->first();
+
+        if (!$cupom || $subtotal < $cupom->minimo_subtotal) {
+            return false;
+        }
+
+        $subtotal -= $cupom->desconto;
+        return true;
     }
 
     public function calcularFrete(float $subtotal): float
@@ -43,16 +59,4 @@ class CartService
         };
     }
 
-
-    public function aplicarCupom(float &$subtotal, ?string $codigo): void
-    {
-        if (!$codigo) {
-            return;
-        }
-
-        $cupom = \App\Models\Cupom::where('codigo', $codigo)->first();
-        if ($cupom && now()->lte($cupom->validade) && $subtotal >= $cupom->minimo_subtotal) {
-            $subtotal -= $cupom->desconto;
-        }
-    }
 }

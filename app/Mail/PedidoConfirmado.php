@@ -40,9 +40,7 @@ class PedidoConfirmado extends Mailable
     {
         return new Content(
             markdown: 'emails.pedido_confirmado',
-            with: [
-                'pedido' => $this->pedido,
-            ],
+            with: ['pedido' => $this->pedido],
         );
     }
 

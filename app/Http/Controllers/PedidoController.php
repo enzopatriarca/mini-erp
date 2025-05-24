@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\FinalizarPedidoRequest;
 use App\Http\Requests\PedidoRequest;
 use App\Mail\PedidoConfirmado;
 use App\Models\Pedido;
 use App\Services\CartService;
 use App\Services\CepService;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 
@@ -24,26 +26,29 @@ class PedidoController extends Controller
         return view('pedidos.show', compact('pedido'));
     }
 
-    public function finalizar(PedidoRequest $request, CartService $cart, CepService $cep)
+    public function create(CartService $cart)
     {
-        // 1) Pega itens do carrinho (sempre array)
-        $itens = session('carrinho', []);
-
-        // 2) Calcula subtotal
+        $itens    = session('carrinho', []);
         $subtotal = collect($itens)
             ->sum(fn($item) => $item['quantidade'] * $item['preco_unitario']);
+        $frete = $cart->calcularFrete($subtotal);
+        $total = $subtotal + $frete;
+        return view('pedidos.create', compact('itens','subtotal','frete','total'));
+    }
 
-        // 3) Aplica cupom
+    public function finalizar(FinalizarPedidoRequest $request, CartService $cart, CepService $cep)
+    {
+        $itens = session('carrinho', []);
+
+        $subtotal = collect($itens)
+            ->sum(fn($item) => $item['quantidade'] * $item['preco_unitario']);
         $cart->aplicarCupom($subtotal, $request->cupom);
 
-        // 4) Calcula frete
         $frete = $cart->calcularFrete($subtotal);
 
-        // 5) Busca endereço
         $dadosCep = $cep->buscar($request->cep);
         $endereco = "{$dadosCep['logradouro']}, {$dadosCep['bairro']}, {$dadosCep['localidade']}";
 
-        // 6) Persiste em transação
         DB::transaction(function() use ($itens, $subtotal, $frete, $request, $endereco) {
             $pedido = Pedido::create([
                 'itens'    => $itens,
@@ -55,14 +60,20 @@ class PedidoController extends Controller
                 'status'   => 'pendente',
             ]);
 
+            foreach ($itens as $item) {
+                \App\Models\Estoque::where('produto_id', $item['produto_id'])
+                    ->where('variacao', $item['variacao'])
+                    ->decrement('quantidade', $item['quantidade']);
+            }
+
             Mail::to($request->email)
-                ->queue(new \App\Mail\PedidoConfirmado($pedido));
+                ->send(new PedidoConfirmado($pedido)); 
+
+            // Mail::to($request->email)
+            // ->queue(new \App\Mail\PedidoConfirmado($pedido));
         });
 
-        // 7) Limpa carrinho
         session()->forget('carrinho');
-
-        // 8) Redirect consistente
-        return redirect('/produtos');
+        return redirect('/pedidos');
     }
 }

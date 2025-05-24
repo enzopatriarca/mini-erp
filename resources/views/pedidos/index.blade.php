@@ -29,7 +29,20 @@
             <td>R$ {{ number_format($p->subtotal,2,',','.') }}</td>
             <td>R$ {{ number_format($p->frete,2,',','.') }}</td>
             <td>R$ {{ number_format($p->total,2,',','.') }}</td>
-            <td>{{ ucfirst($p->status) }}</td>
+            <td>
+              @php
+                // mapeia cada status para uma classe de badge “outline”
+                $classes = [
+                  'pendente' => 'border-warning text-warning',
+                  'aprovado' => 'border-success text-success',
+                  'cancelado'=> 'border-danger  text-danger',
+                ];
+                $class = $classes[$p->status] ?? 'border-secondary text-secondary';
+              @endphp
+              <span class="badge {{ $class }}">
+                {{ ucfirst($p->status) }}
+              </span>
+            </td>
             <td>
               <a href="{{ route('pedidos.show', $p) }}" class="btn btn-sm btn-primary">
                 Ver

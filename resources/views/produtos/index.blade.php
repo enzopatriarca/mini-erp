@@ -7,7 +7,15 @@
     <a href="{{ route('produtos.create') }}" class="btn btn-success">+ Novo</a>
   </div>
 
-  {{-- Alerta quando não encontrar nada --}}
+  {{-- Feedback geral: sucesso e erros --}}
+  @if(session('success'))
+    <div class="alert alert-success">{{ session('success') }}</div>
+  @endif
+  @if(session('error'))
+    <div class="alert alert-danger">{{ session('error') }}</div>
+  @endif
+
+  {{-- Se veio busca mas não encontrou nada --}}
   @if(request('search') && $produtos->isEmpty())
     <div class="alert alert-warning d-flex justify-content-between align-items-center">
       <div>
@@ -20,7 +28,7 @@
     </div>
   @endif
 
-  {{-- Tabela sempre mostrada; corpo usa @forelse para vazio --}}
+  {{-- Tabela de produtos --}}
   <table class="table table-bordered align-middle">
     <thead>
       <tr>
@@ -63,27 +71,24 @@
           </td>
           <td>{{ $totalStock }}</td>
           <td>
-            <a href="{{ route('produtos.edit',$p) }}" class="btn btn-sm btn-warning me-1">Editar</a>
+            <a href="{{ route('produtos.edit', $p) }}" class="btn btn-sm btn-warning me-1">Editar</a>
             <button
               type="button"
               class="btn btn-sm btn-danger btn-delete"
               data-bs-toggle="modal"
               data-bs-target="#deleteModal"
-              data-url="{{ route('produtos.destroy',$p) }}"
+              data-url="{{ route('produtos.destroy', $p) }}"
             >Excluir</button>
           </td>
           <td>
             <form action="{{ route('carrinho.adicionar') }}" method="POST" class="d-flex align-items-center">
               @csrf
               <input type="hidden" name="produto_id" value="{{ $p->id }}">
-
               @if($hasManyVars)
                 <select name="variacao" class="form-select form-select-sm me-1" style="width:120px" {{ $totalStock===0?'disabled':'' }}>
                   @foreach($p->variacoes as $var)
                     @php $q = $p->estoques->firstWhere('variacao',$var)->quantidade ?? 0; @endphp
-                    <option value="{{ $var }}">
-                      {{ $var }} ({{ $q }})
-                    </option>
+                    <option value="{{ $var }}">{{ $var }} ({{ $q }})</option>
                   @endforeach
                 </select>
               @else
@@ -103,7 +108,9 @@
               <button
                 class="btn btn-sm {{ $totalStock===0?'btn-secondary':'btn-primary' }}"
                 {{ $totalStock===0?'disabled title="Sem estoque"':'' }}
-              >{{ $totalStock===0 ? '✖' : 'Comprar' }}</button>
+              >
+                {{ $totalStock===0 ? '✖' : 'Comprar' }}
+              </button>
             </form>
           </td>
         </tr>
@@ -117,7 +124,7 @@
     </tbody>
   </table>
 
-  {{-- Paginação só se houver mais de uma página --}}
+  {{-- Paginação --}}
   @if($produtos->hasPages())
     <div class="d-flex justify-content-center">
       {{ $produtos->links() }}
@@ -149,27 +156,11 @@
 
 @push('scripts')
 <script>
-  // Ajusta a action do form de exclusão
+  
   document.querySelectorAll('.btn-delete').forEach(btn => {
     btn.addEventListener('click', () => {
       document.getElementById('deleteForm').action = btn.dataset.url;
     });
   });
-
-  // Toast de sucesso ao adicionar ao carrinho
-  @if(session('success'))
-    const toastHtml = `
-      <div class="toast align-items-center text-bg-success border-0 mb-2" role="alert" aria-live="assertive" aria-atomic="true">
-        <div class="d-flex">
-          <div class="toast-body">{{ session('success') }}</div>
-          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-        </div>
-      </div>`;
-    const container = document.createElement('div');
-    container.className = 'toast-container position-fixed bottom-0 end-0 p-3';
-    container.innerHTML = toastHtml;
-    document.body.append(container);
-    new bootstrap.Toast(container.querySelector('.toast')).show();
-  @endif
 </script>
 @endpush

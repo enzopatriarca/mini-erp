@@ -11,7 +11,17 @@ class Cupom extends Model
 
     protected $table = 'cupons';
 
-    protected $fillable = ['codigo', 'desconto', 'minimo_subtotal', 'validade'];
+    protected $fillable = [
+        'id',
+        'codigo',
+        'desconto',
+        'minimo_subtotal',
+        'validade',
+    ];
 
-    protected $dates = ['validade'];
+    protected $casts = [
+        'desconto'        => 'decimal:2',
+        'minimo_subtotal' => 'decimal:2',
+        'validade'        => 'date',
+    ];
 }

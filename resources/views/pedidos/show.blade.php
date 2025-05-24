@@ -15,16 +15,21 @@
       </tr>
     </thead>
     <tbody>
-    @foreach($pedido->itens as $item)
-      @php $prod = \App\Models\Produto::find($item['produto_id']); @endphp
-      <tr>
-        <td>{{ $prod->nome }}</td>
-        <td>{{ $item['variacao'] ?: '—' }}</td>
-        <td>{{ $item['quantidade'] }}</td>
-        <td>R$ {{ number_format($item['preco_unitario'],2,',','.') }}</td>
-        <td>R$ {{ number_format($item['quantidade'] * $item['preco_unitario'],2,',','.') }}</td>
-      </tr>
-    @endforeach
+      @foreach($pedido->itens as $item)
+        @php
+          $prod  = \App\Models\Produto::find($item['produto_id']);
+          $label = $prod
+            ? $prod->nome
+            : ($item['nome'] ?? 'Produto removido');
+        @endphp
+        <tr>
+          <td>{{ $label }}</td>
+          <td>{{ $item['variacao'] ?: '—' }}</td>
+          <td>{{ $item['quantidade'] }}</td>
+          <td>R$ {{ number_format($item['preco_unitario'],2,',','.') }}</td>
+          <td>R$ {{ number_format($item['quantidade'] * $item['preco_unitario'],2,',','.') }}</td>
+        </tr>
+      @endforeach
     </tbody>
   </table>
 

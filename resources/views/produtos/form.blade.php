@@ -120,7 +120,7 @@
 
 @push('scripts')
 <script>
-  // Adicionar nova linha em branco
+  
   document.getElementById('btn-add-variacao').onclick = () => {
     const tbody = document.querySelector('#table-variacoes tbody');
     const row = document.createElement('tr');
@@ -132,7 +132,7 @@
     tbody.append(row);
   };
 
-  // Remover linha
+  
   document.querySelector('#table-variacoes tbody')
     .addEventListener('click', e => {
       if (e.target.matches('.btn-remove-row')) {

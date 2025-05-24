@@ -8,34 +8,27 @@ use App\Http\Controllers\CarrinhoController;
 use App\Http\Controllers\PedidoController;
 use App\Http\Controllers\WebhookController;
 use App\Services\CepService;
+use Illuminate\Support\Facades\Mail;
 
-/*
-|--------------------------------------------------------------------------
-| Web Routes
-|--------------------------------------------------------------------------
-*/
-
-// home → lista de produtos
 Route::get('/', fn() => redirect()->route('produtos.index'));
 
-// CRUD de produtos
 Route::resource('produtos', ProdutoController::class);
 
-// CRUD de cupons (sem show)
-Route::resource('cupons', CupomController::class)->except('show');
+Route::resource('cupons', CupomController::class)->parameters(['cupons' => 'cupom'])->except('show');
 
-// Carrinho
-Route::get ( 'carrinho',            [CarrinhoController::class, 'index']  )->name('carrinho.index');
-Route::post('carrinho/adicionar',   [CarrinhoController::class, 'adicionar'])->name('carrinho.adicionar');
+Route::get('carrinho', [CarrinhoController::class, 'index'])->name('carrinho.index');
 
-// Finalizar pedido
+Route::post('carrinho/adicionar', [CarrinhoController::class, 'adicionar'])->name('carrinho.adicionar');
+
+Route::post('carrinho/atualizar', [CarrinhoController::class, 'atualizar'])->name('carrinho.atualizar');
+
+Route::post('carrinho/remover', [CarrinhoController::class, 'remover'])->name('carrinho.remover');
+
 Route::post('pedido/finalizar',     [PedidoController::class,   'finalizar'])->name('pedido.finalizar');
 
-// Webhook externo de status
-Route::post('webhook/status',       [WebhookController::class,  'status'])->name('webhook.status');
+Route::get('pedidos/create', [PedidoController::class, 'create'])->name('pedidos.create');
 
-// ViaCEP usando seu CepService via closure
-Route::get('viacep/{cep}', function(string $cep, CepService $cepService){
+Route::get('viacep/{cep}', function(string $cep, CepService $cepService) {
     return response()->json($cepService->buscar($cep));
 })->name('viacep.buscar');
 

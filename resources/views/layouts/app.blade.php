@@ -4,7 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>@yield('title') – Mini ERP</title>
+
+  <!-- Bootstrap CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+
   <style>
     :root {
       --bs-primary: #6f42c1;
@@ -37,7 +42,7 @@
     #sidebar .sidebar-header {
       display:flex;
       align-items:center;
-      padding:.5rem 1rem;      /* mesmo padding dos nav-links */
+      padding:.5rem 1rem;
       margin-bottom:1rem;
       color:rgba(255,255,255,0.85);
       text-decoration:none;
@@ -46,7 +51,7 @@
     #sidebar a.nav-link {
       display:flex;
       align-items:center;
-      padding:.5rem 1rem;      /* padding padrão */
+      padding:.5rem 1rem;
       color:rgba(255,255,255,0.85);
       text-decoration:none;
       margin-bottom:.25rem;
@@ -69,7 +74,6 @@
       background:#fff;
       transition:margin .3s ease;
     }
-    /* Header interno com botão toggle */
     #inner-header {
       display:flex;
       align-items:center;
@@ -94,81 +98,66 @@
       bottom: 0;
       left: 0;
       width: 100%;
-      z-index: 9999;       /* acima da sidebar */
+      z-index: 9999;
       background: var(--bs-light);
     }
+    #content, main { padding-bottom: 3.5rem; }
 
-    #content, main {
-      padding-bottom: 3.5rem; 
-    }
+    /* Toast acima de tudo */
+    .toast-container { z-index:10000 !important; }
 
     /* BOTÕES */
-    .btn-primary {
-      background-color:var(--bs-primary);
-      border-color:var(--bs-primary);
-    }
-    .btn-primary:hover {
-      background-color:#5a32a3;
-      border-color:#5a32a3;
-    }
-    .btn-secondary {
-      background-color:var(--bs-secondary);
-      border-color:var(--bs-secondary);
-    }
-    .badge-secondary {
-      background-color:var(--bs-secondary);
-    }
+    .btn-primary { background-color:var(--bs-primary); border-color:var(--bs-primary); }
+    .btn-primary:hover { background-color:#5a32a3; border-color:#5a32a3; }
+    .btn-secondary { background-color:var(--bs-secondary); border-color:var(--bs-secondary); }
+    .badge-secondary { background-color:var(--bs-secondary); }
 
     /* SIDEBAR COLLAPSED */
     body.sidebar-collapsed #sidebar {
       width:60px !important;
       padding:.5rem !important;
     }
-    body.sidebar-collapsed #sidebar .label {
-      display:none !important;
-    }
+    body.sidebar-collapsed #sidebar .label { display:none !important; }
     body.sidebar-collapsed #sidebar .nav-link {
       justify-content:center;
       padding:.5rem 0 !important;
     }
-    body.sidebar-collapsed #content {
-      margin-left:0;
-    }
+    body.sidebar-collapsed #content { margin-left:0; }
   </style>
 </head>
 <body>
   {{-- SIDEBAR --}}
   <nav id="sidebar">
     <a href="{{ route('produtos.index') }}" class="sidebar-header">
-      <span class="icon">🔧</span>
+      <i class="bi bi-gear-fill icon"></i>
       <span class="label fs-4 fw-bold">Mini ERP</span>
     </a>
     <ul class="nav nav-pills flex-column mb-auto">
       <li class="nav-item">
         <a href="{{ route('produtos.index') }}"
            class="nav-link {{ request()->routeIs('produtos.*') ? 'active' : '' }}">
-          <span class="icon">🛒</span>
+          <i class="bi bi-cart icon"></i>
           <span class="label">Produtos</span>
         </a>
       </li>
       <li class="nav-item">
         <a href="{{ route('cupons.index') }}"
            class="nav-link {{ request()->routeIs('cupons.*') ? 'active' : '' }}">
-          <span class="icon">🎟️</span>
+          <i class="bi bi-ticket-perforated icon"></i>
           <span class="label">Cupons</span>
         </a>
       </li>
       <li class="nav-item">
         <a href="{{ route('carrinho.index') }}"
            class="nav-link {{ request()->routeIs('carrinho.*') ? 'active' : '' }}">
-          <span class="icon">🛍️</span>
+          <i class="bi bi-bag icon"></i>
           <span class="label">Carrinho</span>
         </a>
       </li>
       <li class="nav-item">
         <a href="{{ route('pedidos.index') }}"
            class="nav-link {{ request()->routeIs('pedidos.*') ? 'active' : '' }}">
-          <span class="icon">📑</span>
+          <i class="bi bi-card-list icon"></i>
           <span class="label">Pedidos</span>
         </a>
       </li>
@@ -183,14 +172,11 @@
     </div>
 
     <main>
-      @if(session('success'))
-        <div class="alert alert-success">{{ session('success') }}</div>
-      @endif
       @yield('content')
     </main>
 
     <footer class="text-center text-muted py-3 border-top">
-      &copy; {{ date('Y') }} Mini ERP. Todos os direitos reservados.
+      &copy; {{ date('Y') }} Mini ERP. Todos os direitos reservados. Enzo Patriarca.
     </footer>
   </div>
 
@@ -200,19 +186,18 @@
     const body = document.body;
     const btn  = document.getElementById('btnToggleSidebar');
 
-    // Reaplica o estado salvo ao carregar
     document.addEventListener('DOMContentLoaded', () => {
       if (localStorage.getItem('sidebar-collapsed') === 'true') {
         body.classList.add('sidebar-collapsed');
       }
     });
 
-    // Toggle + salva no localStorage
     btn.addEventListener('click', () => {
       const collapsed = body.classList.toggle('sidebar-collapsed');
       localStorage.setItem('sidebar-collapsed', collapsed);
     });
   </script>
   @stack('scripts')
+  @stack('modals')
 </body>
 </html>

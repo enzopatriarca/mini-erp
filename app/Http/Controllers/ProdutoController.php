@@ -30,17 +30,14 @@ class ProdutoController extends Controller
 
     public function store(ProdutoRequest $request)
     {
-        // tudo em transação para segurança
         DB::transaction(function() use ($request) {
-            // 1) cria o produto
+
             $produto = Produto::create($request->only(['nome','preco']));
 
-            // 2) atualiza a coluna JSON 'variacoes'
             $variacoes = $request->input('variacoes', []);
             $produto->variacoes = $variacoes;
             $produto->save();
 
-            // 3) persiste os estoques (uma linha por variação)
             foreach ($variacoes as $i => $var) {
                 $produto->estoques()->create([
                     'variacao'   => $var ?: 'default',
@@ -63,15 +60,11 @@ class ProdutoController extends Controller
     public function update(ProdutoRequest $request, Produto $produto)
     {
         DB::transaction(function() use ($request, $produto) {
-            // 1) atualiza nome e preço
             $produto->update($request->only(['nome','preco']));
 
-            // 2) atualiza JSON de variações
             $variacoes = $request->input('variacoes', []);
             $produto->variacoes = $variacoes;
             $produto->save();
-
-            // 3) apaga estoques antigos e recria
             $produto->estoques()->delete();
             foreach ($variacoes as $i => $var) {
                 $produto->estoques()->create([
